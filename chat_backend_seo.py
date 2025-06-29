@@ -1,4 +1,3 @@
-
 from typing import List, Dict
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -29,17 +28,16 @@ system_prompt = {
     )
 }
 
-# Model danych: lista wiadomości
 class ChatHistory(BaseModel):
     messages: List[Dict[str, str]]  # np. [{"role": "user", "content": "..."}]
 
 @app.post("/chat")
 async def chat(history: ChatHistory):
-    # Dodaj system prompt tylko raz na początku
     messages = [system_prompt] + history.messages
 
     chat = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
+
     return {"response": chat.choices[0].message.content}
