@@ -4,11 +4,15 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from openai import OpenAI
+from databases import Database  # <- tutaj dodajemy
 
+# Inicjalizacja klienta OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Inicjalizacja FastAPI
 app = FastAPI()
 
+# Middleware CORS (dla frontendów)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,6 +21,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Inicjalizacja bazy danych PostgreSQL
+DATABASE_URL = os.getenv("DATABASE_URL")
+database = Database(DATABASE_URL)
+
+# Automatyczne połączenie i rozłączenie z bazą
+@app.on_event("startup")
+async def startup():
+    await database.connect()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
+
+# Systemowy prompt do GPT
 system_prompt = {
     "role": "system",
     "content": (
@@ -28,9 +46,11 @@ system_prompt = {
     )
 }
 
+# Model danych dla wejścia
 class ChatHistory(BaseModel):
-    messages: List[Dict[str, str]]  # np. [{"role": "user", "content": "..."}]
+    messages: List[Dict[str, str]]  # [{"role": "user", "content": "..."}]
 
+# Endpoint główny
 @app.post("/chat")
 async def chat(history: ChatHistory):
     messages = [system_prompt] + history.messages
@@ -40,4 +60,12 @@ async def chat(history: ChatHistory):
         messages=messages
     )
 
-    return {"response": chat.choices[0].message.content}
+    response_text = chat.choices[0].message.content
+
+    # Zapis do bazy danych
+    await database.execute(
+        query="INSERT INTO chats (messages) VALUES (:messages)",
+        values={"messages": history.messages + [{"role": "assistant", "content": response_text}]}
+    )
+
+    return {"response": response_text}
