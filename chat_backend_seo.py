@@ -9,7 +9,7 @@ import databases
 
 # Połączenie z bazą danych
 DATABASE_URL = "postgresql://zawitech_chat_database_0ja4_user:ogJ4CT5TywUen5dM3IEKban23cdulnyX@dpg-d1ha4uur433s738pmhdg-a.oregon-postgres.render.com/zawitech_chat_database_0ja4"
-
+database = databases.Database(DATABASE_URL)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
