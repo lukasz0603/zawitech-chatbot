@@ -2,3 +2,5 @@ fastapi
 uvicorn
 pydantic
 openai>=1.0
+databases[postgresql]
+asyncpg
