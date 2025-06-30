@@ -4,15 +4,11 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from openai import OpenAI
-from databases import Database  # <- tutaj dodajemy
 
-# Inicjalizacja klienta OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Inicjalizacja FastAPI
 app = FastAPI()
 
-# Middleware CORS (dla frontendów)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,9 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-# Systemowy prompt do GPT
 system_prompt = {
     "role": "system",
     "content": (
@@ -35,11 +28,9 @@ system_prompt = {
     )
 }
 
-# Model danych dla wejścia
 class ChatHistory(BaseModel):
-    messages: List[Dict[str, str]]  # [{"role": "user", "content": "..."}]
+    messages: List[Dict[str, str]]  # np. [{"role": "user", "content": "..."}]
 
-# Endpoint główny
 @app.post("/chat")
 async def chat(history: ChatHistory):
     messages = [system_prompt] + history.messages
@@ -49,6 +40,4 @@ async def chat(history: ChatHistory):
         messages=messages
     )
 
-    response_text = chat.choices[0].message.content
-
-
+    return {"response": chat.choices[0].message.content}
