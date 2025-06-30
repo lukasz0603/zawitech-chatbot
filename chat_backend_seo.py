@@ -59,12 +59,20 @@ async def chat(request: Request, history: ChatHistory):
     )
     response = chat.choices[0].message.content
 
-    await database.execute(
-        query="INSERT INTO chats (messages, ip_address) VALUES (:messages, :ip)",
-        values={
-            "messages": json.dumps(history.messages + [{"role": "assistant", "content": response}]),
-            "ip": user_ip
-        }
-    )
+    # 🔽 Próbujemy zapisać dane
+    try:
+        result = await database.execute(
+            query="""
+                INSERT INTO chats (messages, ip_address)
+                VALUES (:messages, :ip)
+            """,
+            values={
+                "messages": json.dumps(history.messages + [{"role": "assistant", "content": response}]),
+                "ip": user_ip
+            }
+        )
+        print("✅ Zapisano dane do bazy.")
+    except Exception as e:
+        print("❌ Błąd zapisu do bazy:", e)
 
     return {"response": response}
