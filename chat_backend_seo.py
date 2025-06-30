@@ -21,18 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicjalizacja bazy danych PostgreSQL
-DATABASE_URL = os.getenv("DATABASE_URL")
-database = Database(DATABASE_URL)
 
-# Automatyczne połączenie i rozłączenie z bazą
-@app.on_event("startup")
-async def startup():
-    await database.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
 
 # Systemowy prompt do GPT
 system_prompt = {
@@ -62,10 +51,4 @@ async def chat(history: ChatHistory):
 
     response_text = chat.choices[0].message.content
 
-    # Zapis do bazy danych
-    await database.execute(
-        query="INSERT INTO chats (messages) VALUES (:messages)",
-        values={"messages": history.messages + [{"role": "assistant", "content": response_text}]}
-    )
 
-    return {"response": response_text}
