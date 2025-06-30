@@ -7,7 +7,7 @@ import os
 import json
 import databases
 
-# Połączenie z bazą
+# Połączenie z bazą danych
 DATABASE_URL = os.getenv("DATABASE_URL")
 database = databases.Database(DATABASE_URL)
 
@@ -15,7 +15,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
-# Middleware
+# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prompt
+# Systemowy prompt
 system_prompt = {
     "role": "system",
     "content": (
@@ -36,7 +36,7 @@ system_prompt = {
     )
 }
 
-# Model historii rozmowy
+# Model danych
 class ChatHistory(BaseModel):
     messages: List[Dict[str, str]]
 
@@ -48,9 +48,8 @@ async def startup():
 async def shutdown():
     await database.disconnect()
 
-# 🔄 Główna trasa: dynamiczny client_id
-@app.post("/chat/{client_id}")
-async def chat(client_id: str, request: Request, history: ChatHistory):
+@app.post("/chat")
+async def chat(request: Request, history: ChatHistory):
     user_ip = request.client.host
     messages = [system_prompt] + history.messages
 
@@ -61,12 +60,8 @@ async def chat(client_id: str, request: Request, history: ChatHistory):
     response = chat.choices[0].message.content
 
     await database.execute(
-        query="""
-            INSERT INTO chats (client_id, messages, ip_address)
-            VALUES (:client_id, :messages, :ip)
-        """,
+        query="INSERT INTO chats (messages, ip_address) VALUES (:messages, :ip)",
         values={
-            "client_id": client_id,
             "messages": json.dumps(history.messages + [{"role": "assistant", "content": response}]),
             "ip": user_ip
         }
