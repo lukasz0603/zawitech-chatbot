@@ -42,10 +42,7 @@ class ChatHistory(BaseModel):
 
 @app.on_event("startup")
 async def startup():
-    print("🔌 Łączenie z bazą danych...")
     await database.connect()
-    print("✅ Połączono.")
-print("🌐 DATABASE_URL =", DATABASE_URL)
 
 @app.on_event("shutdown")
 async def shutdown():
