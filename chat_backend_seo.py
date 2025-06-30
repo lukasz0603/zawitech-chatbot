@@ -7,8 +7,8 @@ import os
 import json
 import databases
 
-# Połączenie z bazą danych (użyj swojego DATABASE_URL z Render)
-DATABASE_URL = os.getenv("DATABASE_URL")  # <-- dodaj do środowiska!
+# Połączenie z bazą danych
+DATABASE_URL = os.getenv("DATABASE_URL")
 database = databases.Database(DATABASE_URL)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -40,7 +40,6 @@ system_prompt = {
 class ChatHistory(BaseModel):
     messages: List[Dict[str, str]]
 
-# Połączenie z bazą na starcie
 @app.on_event("startup")
 async def startup():
     await database.connect()
@@ -49,22 +48,23 @@ async def startup():
 async def shutdown():
     await database.disconnect()
 
-# Główna trasa chatu
 @app.post("/chat")
 async def chat(request: Request, history: ChatHistory):
+    user_ip = request.client.host
     messages = [system_prompt] + history.messages
 
-    # Odpowiedź od OpenAI
     chat = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
     response = chat.choices[0].message.content
 
-    # Zapis do bazy danych (jako JSONB)
     await database.execute(
-        query="INSERT INTO chats (messages) VALUES (:messages)",
-        values={"messages": json.dumps(history.messages)}
+        query="INSERT INTO chats (messages, ip_address) VALUES (:messages, :ip)",
+        values={
+            "messages": json.dumps(history.messages + [{"role": "assistant", "content": response}]),
+            "ip": user_ip
+        }
     )
 
     return {"response": response}
