@@ -1,8 +1,8 @@
-fastapi==0.100.0
-uvicorn[standard]==0.23.1
-openai==1.93.0
-databases==0.9.0
-asyncpg==0.27.0
-requests==2.31.0
-beautifulsoup4==4.12.2
-python-multipart==0.0.6
+fastapi
+uvicorn
+openai
+databases
+asyncpg
+requests
+beautifulsoup4
+python-multipart
