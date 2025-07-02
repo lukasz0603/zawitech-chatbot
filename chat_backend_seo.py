@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domyślny system prompt dla SEO
+# Domyślny system prompt
 DEFAULT_PROMPT = (
     "Jesteś polskojęzycznym asystentem AI w firmie Zawitech, która oferuje profesjonalne usługi SEO. "
     "Najpierw zapytaj: Czy klient ma już stronę internetową? Czy działa lokalnie, ogólnopolsko czy międzynarodowo? "
@@ -46,29 +46,36 @@ async def shutdown():
 async def chat(
     request: Request,
     history: ChatHistory,
-    client_id: str = Query(..., description="Twój klucz embed dla danego klienta")
+    client_id: str = Query(..., description="Twój embed key (UUID z kolumny clients.id)")
 ):
-    # 1) pobierz custom_prompt z tabeli users
+    # 1) Pobierz custom_prompt z tabeli clients
     row = await database.fetch_one(
-        "SELECT custom_prompt FROM users WHERE embed_key = :ek",
-        values={"ek": client_id}
+        """
+        SELECT custom_prompt
+        FROM clients
+        WHERE id = :cid
+        """,
+        values={"cid": client_id}
     )
-    if not row:
-        raise HTTPException(404, detail="Nie znaleziono klienta o podanym client_id")
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Nie znaleziono klienta o podanym client_id"
+        )
 
     system_content = row["custom_prompt"] or DEFAULT_PROMPT
 
-    # 2) zbuduj wiadomości
+    # 2) Przygotuj wiadomości
     messages = [{"role": "system", "content": system_content}] + history.messages
 
-    # 3) wywołaj OpenAI
+    # 3) Wywołaj OpenAI
     chat_resp = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
     assistant_text = chat_resp.choices[0].message.content
 
-    # 4) zapisz do bazy z client_id i IP
+    # 4) Zapisz całą konwersację do bazy
     try:
         await database.execute(
             """
@@ -82,6 +89,7 @@ async def chat(
             }
         )
     except Exception as e:
+        # nie blokujemy odpowiedzi, tylko logujemy
         print("❌ Błąd zapisu do bazy:", e)
 
     return {"response": assistant_text}
