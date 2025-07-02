@@ -46,14 +46,14 @@ async def shutdown():
 async def chat(
     request: Request,
     history: ChatHistory,
-    client_id: str = Query(..., description="Twój embed key (UUID z kolumny clients.id)")
+    client_id: str = Query(..., description="Twój embed key (UUID z kolumny clients.embed_key)")
 ):
     # 1) Pobierz custom_prompt z tabeli clients
     row = await database.fetch_one(
         """
         SELECT custom_prompt
         FROM clients
-        WHERE id = :cid
+        WHERE embed_key = :cid
         """,
         values={"cid": client_id}
     )
