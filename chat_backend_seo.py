@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from fastapi import FastAPI, Request, Query, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +7,6 @@ import os
 import json
 import databases
 
-# Połączenie z bazą danych
 DATABASE_URL = os.getenv("DATABASE_URL")
 database = databases.Database(DATABASE_URL)
 
@@ -22,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Domyślny system prompt
+# Domyślny prompt SEO
 DEFAULT_PROMPT = (
     "Jesteś polskojęzycznym asystentem AI w firmie Zawitech, która oferuje profesjonalne usługi SEO. "
     "Najpierw zapytaj: Czy klient ma już stronę internetową? Czy działa lokalnie, ogólnopolsko czy międzynarodowo? "
@@ -48,34 +47,70 @@ async def chat(
     history: ChatHistory,
     client_id: str = Query(..., description="Twój embed key (UUID z kolumny clients.embed_key)")
 ):
-    # 1) Pobierz custom_prompt z tabeli clients
-    row = await database.fetch_one(
+    # — 1) Pobierz dane klienta: custom_prompt + extracted_text
+    client_row = await database.fetch_one(
         """
-        SELECT custom_prompt
+        SELECT custom_prompt, extracted_text
         FROM clients
         WHERE embed_key = :cid
         """,
         values={"cid": client_id}
     )
-    if row is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Nie znaleziono klienta o podanym client_id"
-        )
+    if not client_row:
+        raise HTTPException(404, "Nie znaleziono klienta o podanym client_id")
 
-    system_content = row["custom_prompt"] or DEFAULT_PROMPT
+    custom = client_row["custom_prompt"]
+    website_text = client_row["extracted_text"]
 
-    # 2) Przygotuj wiadomości
+    # — 2) Pobierz ostatni PDF (tutaj zakładam, że masz w documents kolumnę pdf_text lub analogicznie zapisany tekst)
+    pdf_row = await database.fetch_one(
+        """
+        SELECT pdf_text
+        FROM documents
+        WHERE client_id = :cid
+        ORDER BY uploaded_at DESC
+        LIMIT 1
+        """,
+        values={"cid": client_id}
+    )
+    pdf_text = pdf_row["pdf_text"] if pdf_row else ""
+
+    # — 3) Zbuduj pełny system prompt
+    system_content = f"""
+You are an expert AI assistant for client `{client_id}`. Use all three sources below to craft your answer:
+
+WEBSITE_CONTENT:
+\"\"\"
+{website_text}
+\"\"\"
+
+CUSTOM_INSTRUCTIONS:
+\"\"\"
+{custom or DEFAULT_PROMPT}
+\"\"\"
+
+PDF_DATA:
+\"\"\"
+{pdf_text}
+\"\"\"
+
+Please format your answer as:
+1. SUMMARY (2–3 sentences)
+2. RECOMMENDATIONS (bullet points)
+3. NEXT STEPS or QUESTIONS (if more info needed)
+"""
+
+    # — 4) Przygotuj wiadomości
     messages = [{"role": "system", "content": system_content}] + history.messages
 
-    # 3) Wywołaj OpenAI
+    # — 5) Wywołaj OpenAI
     chat_resp = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
     assistant_text = chat_resp.choices[0].message.content
 
-    # 4) Zapisz całą konwersację do bazy
+    # — 6) Zapisz rozmowę do bazy
     try:
         await database.execute(
             """
@@ -89,7 +124,6 @@ async def chat(
             }
         )
     except Exception as e:
-        # nie blokujemy odpowiedzi, tylko logujemy
         print("❌ Błąd zapisu do bazy:", e)
 
     return {"response": assistant_text}
