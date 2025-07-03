@@ -23,11 +23,7 @@ app.add_middleware(
 
 # Domyślny prompt SEO
 DEFAULT_PROMPT = (
-    "Jesteś polskojęzycznym asystentem AI w firmie Zawitech, która oferuje profesjonalne usługi SEO. "
-    "Najpierw zapytaj: Czy klient ma już stronę internetową? Czy działa lokalnie, ogólnopolsko czy międzynarodowo? "
-    "Jakie ma cele (więcej odwiedzin, sprzedaż)? Jaki ma budżet? "
-    "Następnie zaproponuj jeden z trzech pakietów SEO: START (3000 PLN), STANDARD (5000 PLN), PREMIUM (7000 PLN). "
-    "Umowa: czas nieokreślony, 1 mies. wypowiedzenia."
+    "Jesteś polskojęzycznym asystentem AI dla wielu firm. Badz mily i sympatyczny."
 )
 
 class ChatHistory(BaseModel):
@@ -77,7 +73,8 @@ async def chat(
 
     # — 3) Zbuduj pełny system prompt
     system_content = f"""
-You are an expert AI assistant for client `{client_id}`. Use all three sources below to craft your answer:
+You are an expert AI assistant for client `{client_id}`. There are three sources below. Two sources such as WEBSITE_CONTENT AND PDF_DATE use to give informative general answers about what company does if users doesn't have any idea about it. 
+The source such as CUSTOM_INSTRUCTIONS contains information that are crucial for a client, it includes offer and the cost. Please try to reasonable asnwers, not too long. Give receommednations and ask releveant quetions.
 
 WEBSITE_CONTENT:
 \"\"\"
@@ -94,10 +91,7 @@ PDF_DATA:
 {pdf_text}
 \"\"\"
 
-Please format your answer as:
-1. SUMMARY (2–3 sentences)
-2. RECOMMENDATIONS (bullet points)
-3. NEXT STEPS or QUESTIONS (if more info needed)
+
 """
 
     # — 4) Przygotuj wiadomości
