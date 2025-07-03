@@ -74,7 +74,8 @@ async def chat(
     # — 3) Zbuduj pełny system prompt
     system_content = f"""
 You are an expert AI assistant for client `{client_id}`. There are three sources below. Two sources such as WEBSITE_CONTENT AND PDF_DATE use to give informative general answers about what company does if users doesn't have any idea about it. 
-The source such as CUSTOM_INSTRUCTIONS contains information that are crucial for a client, it includes offer and the cost. Please try to reasonable asnwers, not too long. Give receommednations and ask releveant quetions.
+The source such as CUSTOM_INSTRUCTIONS contains information that are crucial for a client, it includes offer and the cost. Please try to give short asnwers and ask releveant quetions. Try to encourage clients in a comversations and avoid 'closed' answers. Try to be nice 
+and make user to feel welcomed.
 
 WEBSITE_CONTENT:
 \"\"\"
