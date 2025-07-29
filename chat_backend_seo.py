@@ -6,6 +6,9 @@ from openai import OpenAI
 import os
 import json
 import databases
+import re
+import smtplib
+from email.message import EmailMessage
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 database = databases.Database(DATABASE_URL)
@@ -36,6 +39,33 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     await database.disconnect()
+
+
+def send_phone_email(client_email: str, phone_number: str):
+    msg = EmailMessage()
+    msg["Subject"] = "Nowy numer telefonu od klienta"
+    msg["From"] = "twojemail@example.com"
+    msg["To"] = client_email
+    msg.set_content(f"Klient podał numer telefonu: {phone_number}")
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login("twojemail@example.com", "TWOJE_HASLO_LUB_APP_PASSWORD")
+            smtp.send_message(msg)
+        print("✅ E-mail wysłany")
+    except Exception as e:
+        print("❌ Błąd wysyłania e-maila:", e)
+
+
+def extract_phone_number(messages: List[Dict[str, str]]) -> Optional[str]:
+    phone_pattern = re.compile(r"\b\d{9,}\b")  # prosty wzorzec na 9+ cyfr
+    for msg in messages:
+        if msg["role"] == "user":
+            match = phone_pattern.search(msg["content"])
+            if match:
+                return match.group()
+    return None
+
 
 @app.post("/chat")
 async def chat(
@@ -105,6 +135,18 @@ PDF_DATA:
     )
     assistant_text = chat_resp.choices[0].message.content
 
+
+    # — 4.1) Spróbuj wyłapać numer telefonu i wysłać e-mail
+phone = extract_phone_number(history.messages)
+if phone:
+    email_row = await database.fetch_one(
+        "SELECT email FROM clients WHERE embed_key = :cid",
+        values={"cid": client_id}
+    )
+    if email_row and email_row["email"]:
+        send_phone_email(email_row["email"], phone)
+
+    
     # — 6) Zapisz rozmowę do bazy
     try:
         await database.execute(
