@@ -143,7 +143,7 @@ PDF_DATA:
             """
             SELECT u.email
             FROM users u
-            JOIN clients c ON u.id = c.user_id
+            JOIN clients c ON u.embed_key = c.embed_key
             WHERE c.embed_key = :cid
             """,
             values={"cid": client_id}
