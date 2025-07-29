@@ -140,7 +140,12 @@ PDF_DATA:
 phone = extract_phone_number(history.messages)
 if phone:
     email_row = await database.fetch_one(
-        "SELECT email FROM clients WHERE embed_key = :cid",
+        """
+        SELECT u.email
+        FROM users u
+        JOIN clients c ON u.id = c.user_id
+        WHERE c.embed_key = :cid
+        """,
         values={"cid": client_id}
     )
     if email_row and email_row["email"]:
