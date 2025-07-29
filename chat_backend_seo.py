@@ -44,13 +44,13 @@ async def shutdown():
 def send_phone_email(client_email: str, phone_number: str):
     msg = EmailMessage()
     msg["Subject"] = "Nowy numer telefonu od klienta"
-    msg["From"] = "twojemail@example.com"
+    msg["From"] = "kontakt@chatnex.pl"
     msg["To"] = client_email
     msg.set_content(f"Klient podał numer telefonu: {phone_number}")
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login("twojemail@example.com", "TWOJE_HASLO_LUB_APP_PASSWORD")
+            smtp.login("kontakt@chatnex.pl", "Start3274!")
             smtp.send_message(msg)
         print("✅ E-mail wysłany")
     except Exception as e:
