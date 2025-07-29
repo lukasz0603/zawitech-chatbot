@@ -49,7 +49,7 @@ def send_phone_email(client_email: str, phone_number: str):
     msg.set_content(f"Klient podał numer telefonu: {phone_number}")
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+     with smtplib.SMTP_SSL("smtp.mail.ovh.net", 465) as smtp:
             smtp.login("kontakt@chatnex.pl", "Start3274!")
             smtp.send_message(msg)
         print("✅ E-mail wysłany")
