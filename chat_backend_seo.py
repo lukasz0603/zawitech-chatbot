@@ -136,20 +136,20 @@ PDF_DATA:
     assistant_text = chat_resp.choices[0].message.content
 
 
-    # — 4.1) Spróbuj wyłapać numer telefonu i wysłać e-mail
-phone = extract_phone_number(history.messages)
-if phone:
-    email_row = await database.fetch_one(
-        """
-        SELECT u.email
-        FROM users u
-        JOIN clients c ON u.id = c.user_id
-        WHERE c.embed_key = :cid
-        """,
-        values={"cid": client_id}
-    )
-    if email_row and email_row["email"]:
-        send_phone_email(email_row["email"], phone)
+    # — 5.1) Spróbuj wyłapać numer telefonu i wysłać e-mail
+    phone = extract_phone_number(history.messages)
+    if phone:
+        email_row = await database.fetch_one(
+            """
+            SELECT u.email
+            FROM users u
+            JOIN clients c ON u.id = c.user_id
+            WHERE c.embed_key = :cid
+            """,
+            values={"cid": client_id}
+        )
+        if email_row and email_row["email"]:
+            send_phone_email(email_row["email"], phone)
 
     
     # — 6) Zapisz rozmowę do bazy
